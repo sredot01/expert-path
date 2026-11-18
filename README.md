@@ -1,49 +1,36 @@
-# Tech Experts Discovery - MVP
+# Expert Path
 
-A simple MVP for discovering tech practitioners (Kubernetes, AWS, SRE, Observability, Platform Engineering, etc.) across LinkedIn, YouTube, X, GitHub, and blogs.
+Discover tech practitioners worth following across LinkedIn, YouTube, X, GitHub, and blogs.
 
 ## Stack
 
-- **Backend**: Go (net/http) — in-memory data for MVP
-- **Frontend**: React + Vite
+- **Cloudflare Worker** — API + static assets
+- **React + Vite** frontend
+- Original Go backend kept in `/backend` for reference
 
-## Run locally
-
-### 1. Backend
-
-```bash
-cd backend
-go run main.go
-```
-
-Runs on http://localhost:8080
-
-### 2. Frontend
+## Local development
 
 ```bash
-cd frontend
+# Install dependencies
 npm install
-npm run dev
+cd frontend && npm install && cd ..
+
+# Build frontend
+npm run build
+
+# Run locally with Wrangler
+npx wrangler dev
 ```
 
-Opens on http://localhost:5173
+## Deploy to Cloudflare
 
-The frontend proxies `/api` calls to the backend.
+```bash
+npx wrangler deploy
+```
 
-## What it does
+Or connect the repo in the Cloudflare dashboard — the `wrangler.toml` makes the Deploy button work.
 
-- Lists curated experts with topics, short bio, and "why follow"
-- Search by name / bio / topics
-- Filter by topic
-- Direct links to their LinkedIn, YouTube, X, GitHub, or blog
+## API
 
-## Next steps for a real version
-
-- Move data to a database (Postgres)
-- Add authentication / contribution flow
-- Better expertise signals (content volume, recency, community validation)
-- Learning path suggestions
-- Admin UI for curation
-- Deploy backend on AWS (ECS/EKS or Lambda) and frontend on S3 + CloudFront
-
-This is intentionally minimal so you can run it in minutes and decide if the idea is worth expanding.
+- `GET /api/experts?q=search&topic=Kubernetes`
+- `GET /api/topics`

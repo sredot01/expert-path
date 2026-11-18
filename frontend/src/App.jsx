@@ -35,8 +35,8 @@ function App() {
   return (
     <div className="container">
       <header>
-        <h1>Tech Experts Discovery</h1>
-        <p>Find practitioners worth following on Kubernetes, AWS, SRE, Observability, and more.</p>
+        <h1>Expert Path</h1>
+        <p>Discover practitioners worth following on Kubernetes, AWS, SRE, Observability, and more.</p>
       </header>
 
       <div className="controls">

@@ -1,0 +1,7 @@
+name = "expert-path"
+main = "src/index.js"
+compatibility_date = "2026-11-18"
+
+[assets]
+directory = "./frontend/dist"
+binding = "ASSETS"
