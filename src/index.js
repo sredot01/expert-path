@@ -1,5 +1,5 @@
-// Expert Path - Cloudflare Worker
-// Serves API + static frontend assets
+// Expert Path - Self-contained Cloudflare Worker
+// Serves full UI + API
 
 const experts = [
   {
@@ -93,17 +93,112 @@ function filterExperts(query = "", topic = "") {
     const matchQuery = !q || 
       e.name.toLowerCase().includes(q) ||
       e.bio.toLowerCase().includes(q) ||
-      e.why_follow.toLowerCase().includes(q);
+      (e.why_follow && e.why_follow.toLowerCase().includes(q));
     const matchTopic = !t || e.topics.some(tp => tp.toLowerCase().includes(t));
     return matchQuery && matchTopic;
   });
 }
 
+const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expert Path</title>
+<style>
+:root { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+body { margin: 0; background: #f8f9fa; color: #1a1a1a; }
+.container { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+header { text-align: center; margin-bottom: 2rem; }
+header h1 { margin: 0 0 0.5rem; font-size: 2.2rem; }
+header p { color: #555; margin: 0; }
+.controls { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+input, select { padding: 0.6rem 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+input { flex: 1; min-width: 200px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem; }
+.card { background: white; border: 1px solid #e5e5e5; border-radius: 10px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.card h3 { margin: 0 0 0.4rem; }
+.topics { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0; }
+.topic { background: #e8f0fe; color: #1a56db; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 500; }
+.bio { color: #444; font-size: 0.95rem; margin: 0.5rem 0; }
+.why { background: #f0f9ff; border-left: 3px solid #3b82f6; padding: 0.6rem 0.8rem; font-size: 0.9rem; margin: 0.75rem 0; }
+.links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+.links a { color: #2563eb; text-decoration: none; font-size: 0.85rem; padding: 0.25rem 0.5rem; border: 1px solid #dbeafe; border-radius: 4px; }
+.links a:hover { background: #eff6ff; }
+.empty { text-align: center; color: #666; padding: 2rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Expert Path</h1>
+    <p>Discover practitioners worth following on Kubernetes, AWS, SRE, Observability, and more.</p>
+  </header>
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search by name, bio, or topic...">
+    <select id="topic">
+      <option value="">All topics</option>
+    </select>
+  </div>
+  <div id="results" class="grid"></div>
+</div>
+<script>
+const experts = ${JSON.stringify(experts)};
+const topics = ${JSON.stringify(getTopics())};
+
+const searchEl = document.getElementById('search');
+const topicEl = document.getElementById('topic');
+const resultsEl = document.getElementById('results');
+
+topics.forEach(t => {
+  const opt = document.createElement('option');
+  opt.value = t;
+  opt.textContent = t;
+  topicEl.appendChild(opt);
+});
+
+function render() {
+  const q = searchEl.value.toLowerCase();
+  const t = topicEl.value.toLowerCase();
+  const filtered = experts.filter(e => {
+    const matchQuery = !q || e.name.toLowerCase().includes(q) || e.bio.toLowerCase().includes(q) || (e.why_follow && e.why_follow.toLowerCase().includes(q));
+    const matchTopic = !t || e.topics.some(tp => tp.toLowerCase().includes(t));
+    return matchQuery && matchTopic;
+  });
+
+  if (filtered.length === 0) {
+    resultsEl.innerHTML = '<div class="empty">No experts found. Try a different search.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = filtered.map(e => \`
+    <div class="card">
+      <h3>\${e.name}</h3>
+      <div class="topics">\${e.topics.map(tp => \`<span class="topic">\${tp}</span>\`).join('')}</div>
+      <p class="bio">\${e.bio}</p>
+      <div class="why"><strong>Why follow:</strong> \${e.why_follow || ''}</div>
+      <div class="links">
+        \${e.linkedin ? \`<a href="\${e.linkedin}" target="_blank" rel="noopener">LinkedIn</a>\` : ''}
+        \${e.youtube ? \`<a href="\${e.youtube}" target="_blank" rel="noopener">YouTube</a>\` : ''}
+        \${e.x ? \`<a href="\${e.x}" target="_blank" rel="noopener">X</a>\` : ''}
+        \${e.github ? \`<a href="\${e.github}" target="_blank" rel="noopener">GitHub</a>\` : ''}
+        \${e.blog ? \`<a href="\${e.blog}" target="_blank" rel="noopener">Blog</a>\` : ''}
+      </div>
+    </div>
+  \`).join('');
+}
+
+searchEl.addEventListener('input', render);
+topicEl.addEventListener('change', render);
+render();
+</script>
+</body>
+</html>`;
+
 export default {
-  async fetch(request, env) {
+  async fetch(request) {
     const url = new URL(request.url);
 
-    // API routes
     if (url.pathname === "/api/experts") {
       const query = url.searchParams.get("q") || "";
       const topic = url.searchParams.get("topic") || "";
@@ -119,11 +214,8 @@ export default {
       });
     }
 
-    // Serve static frontend assets
-    if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
-    }
-
-    return new Response("Expert Path API is running. Build the frontend to serve the UI.", { status: 200 });
+    return new Response(html, {
+      headers: { "Content-Type": "text/html;charset=UTF-8" }
+    });
   }
 };
